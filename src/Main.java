@@ -1,15 +1,17 @@
 import java.io.*;
-import java.nio.file.FileVisitResult;
-import java.nio.file.FileVisitor;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.charset.Charset;
+import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.stream.Stream;
 
 public class Main {
 
     public static void main(String[] args) {
-        // write your code here
         readFile();
         writeFile();
         readCsvFile();
@@ -19,6 +21,52 @@ public class Main {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        createZipFile();
+    }
+
+    private static void createZipFile() {
+
+        String[] data = {"Line 1", "Line 2 2", "Line 3 3 3", "Line 4 4 4 4", "Line 5 5 5 5 5"};
+
+        try (FileSystem zipFs = openZip(Paths.get("files/myData.zip"));) {
+            System.out.println("zip file created successfully");
+            copyFileToZip(zipFs);
+            writeToZipFile1(zipFs, data);
+            writeToZipFile2(zipFs, data);
+        } catch (Exception exception) {
+            System.out.println(exception.getClass().getSimpleName() + " - " + exception.getMessage());
+        }
+    }
+
+    private static void writeToZipFile2(FileSystem zipFs, String[] data) throws IOException {
+        Files.write(zipFs.getPath("/myFile2.txt"), Arrays.asList(data)
+                , Charset.defaultCharset(), StandardOpenOption.CREATE);
+    }
+
+    private static void writeToZipFile1(FileSystem zipFs, String[] data) throws IOException {
+
+        try (BufferedWriter writer = Files.newBufferedWriter(zipFs.getPath("/newFile1.txt"));) {
+            for (String line : data) {
+                writer.write(line);
+                writer.newLine();
+            }
+        }
+    }
+
+    private static void copyFileToZip(FileSystem zipFs) throws IOException {
+        Path sourceFile = Path.of("files/debug.log");
+        Path destinationFile = zipFs.getPath("/copiedDebug.log");
+        Files.copy(sourceFile, destinationFile, StandardCopyOption.REPLACE_EXISTING);
+    }
+
+    private static FileSystem openZip(Path path) throws URISyntaxException, IOException {
+        Map<String, String> props = new HashMap<>();
+        props.put("create", "true");
+
+        URI zipUri = new URI("jar:file", path.toUri().getPath(), null);
+        FileSystem zipFs = FileSystems.newFileSystem(zipUri, props);
+        return zipFs;
     }
 
     private static void walkDirectoriesUsingStreamAPI() {
